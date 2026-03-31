@@ -143,11 +143,18 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout, onLogoChang
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.publicSlug || !form.email) {
+    const trimmedName = form.name.trim();
+    const trimmedEmail = form.email.trim().toLowerCase();
+    const trimmedPassword = form.password.trim();
+
+    if (!trimmedName || !form.publicSlug || !trimmedEmail) {
       return alert('Preencha o nome da loja e o e-mail de acesso.');
     }
-    if (!isLocalDataMode && !form.password && modalMode === 'create') {
+    if (modalMode === 'create' && !trimmedPassword) {
       return alert('Informe uma senha inicial.');
+    }
+    if (modalMode === 'create' && trimmedPassword.length < 6) {
+      return alert('A senha inicial precisa ter pelo menos 6 caracteres.');
     }
 
     try {
@@ -156,14 +163,14 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout, onLogoChang
       let passwordHash = '';
 
       if (isLocalDataMode) {
-        passwordHash = form.password.trim() || stores.find((store) => store.id === form.id)?.passwordHash || '';
+        passwordHash = trimmedPassword || stores.find((store) => store.id === form.id)?.passwordHash || '';
       } else {
         try {
           const authResult = await upsertStoreAuthUser({
             uid: form.authUid || undefined,
-            email: form.email.trim(),
-            password: form.password.trim() || undefined,
-            displayName: form.name.trim()
+            email: trimmedEmail,
+            password: trimmedPassword || undefined,
+            displayName: trimmedName
           });
           authUid = authResult.uid;
         } catch (error) {
@@ -172,7 +179,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout, onLogoChang
           }
 
           passwordHash =
-            form.password.trim() ||
+            trimmedPassword ||
             stores.find((store) => store.id === form.id)?.passwordHash ||
             '';
         }
@@ -180,8 +187,8 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout, onLogoChang
 
       const storeToSave: Store = {
         id: form.id || Math.random().toString(36).slice(2, 11),
-        name: form.name.trim(),
-        email: form.email.trim(),
+        name: trimmedName,
+        email: trimmedEmail,
         authUid,
         passwordHash,
         startDate: form.startDate || '',

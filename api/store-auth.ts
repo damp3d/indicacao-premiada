@@ -8,6 +8,7 @@ type VercelRequest = {
   method?: string;
   body?: unknown;
   headers: Record<string, string | string[] | undefined>;
+  on?: (event: string, callback: (chunk?: unknown) => void) => void;
 };
 
 type VercelResponse = {
@@ -15,12 +16,33 @@ type VercelResponse = {
   json: (body: Record<string, unknown>) => void;
 };
 
-const getJsonBody = (req: VercelRequest) => {
-  if (!req.body) return {};
-  if (typeof req.body === 'string') {
+const readRequestBody = (req: VercelRequest) =>
+  new Promise<string>((resolve, reject) => {
+    if (!req.on) {
+      resolve('');
+      return;
+    }
+
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += String(chunk ?? '');
+    });
+    req.on('end', () => resolve(raw));
+    req.on('error', (error) => reject(error));
+  });
+
+const getJsonBody = async (req: VercelRequest) => {
+  if (req.body && typeof req.body === 'object') {
+    return req.body as Record<string, unknown>;
+  }
+
+  if (typeof req.body === 'string' && req.body.trim()) {
     return JSON.parse(req.body);
   }
-  return req.body as Record<string, unknown>;
+
+  const rawBody = await readRequestBody(req);
+  if (!rawBody.trim()) return {};
+  return JSON.parse(rawBody);
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -31,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await requireAdmin(req);
 
-    const { uid, email, password, displayName } = getJsonBody(req) as {
+    const { uid, email, password, displayName } = (await getJsonBody(req)) as {
       uid?: string;
       email?: string;
       password?: string;
