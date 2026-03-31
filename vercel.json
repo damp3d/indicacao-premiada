@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/ping",
+      "dest": "/api/ping.ts"
+    },
+    {
+      "src": "/api/store-auth",
+      "dest": "/api/store-auth.ts"
+    },
+    {
+      "src": "/api/store-reset-link",
+      "dest": "/api/store-reset-link.ts"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
