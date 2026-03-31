@@ -179,6 +179,11 @@ const normalizeRedeem = (redeem: RedeemRequest): RedeemRequest => ({
   amount: Number(redeem.amount ?? 0)
 });
 
+const removeUndefinedFields = <T extends object>(value: T) =>
+  Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(([, fieldValue]) => fieldValue !== undefined)
+  ) as T;
+
 const readLocalJson = <T>(key: string, fallback: T): T => {
   if (!isBrowser) return fallback;
 
@@ -256,7 +261,7 @@ export const saveSystemConfig = async (config: SystemConfig) => {
   }
 
   if (!db) return;
-  await setDoc(doc(db, 'system', CONFIG_DOC_ID), config);
+  await setDoc(doc(db, 'system', CONFIG_DOC_ID), removeUndefinedFields(config));
 };
 
 export const getStores = async (): Promise<Store[]> => {
@@ -302,7 +307,7 @@ export const saveStore = async (store: Store) => {
 
   if (!db) return;
   const { id, ...data } = normalizedStore;
-  await setDoc(doc(db, 'stores', id), data);
+  await setDoc(doc(db, 'stores', id), removeUndefinedFields(data));
 };
 
 export const deleteStore = async (id: string) => {
@@ -363,7 +368,7 @@ export const saveReferrer = async (referrer: Referrer) => {
 
   if (!db) return;
   const { id, ...data } = normalizedReferrer;
-  await setDoc(doc(db, 'referrers', id), data);
+  await setDoc(doc(db, 'referrers', id), removeUndefinedFields(data));
 };
 
 export const getReferrals = async (storeId?: string): Promise<Referral[]> => {
@@ -401,11 +406,11 @@ export const addReferral = async (referral: Referral) => {
   const { id, ...data } = normalizedReferral;
 
   if (id) {
-    await setDoc(doc(db, 'referrals', id), { ...data, id });
+    await setDoc(doc(db, 'referrals', id), removeUndefinedFields({ ...data, id }));
     return;
   }
 
-  const docRef = await addDoc(collection(db, 'referrals'), data);
+  const docRef = await addDoc(collection(db, 'referrals'), removeUndefinedFields(data));
   await updateDoc(docRef, { id: docRef.id });
 };
 
@@ -423,7 +428,7 @@ export const updateReferral = async (referral: Referral) => {
 
   if (!db) return;
   const { id, ...data } = normalizedReferral;
-  await updateDoc(doc(db, 'referrals', id), data as Record<string, unknown>);
+  await updateDoc(doc(db, 'referrals', id), removeUndefinedFields(data as Record<string, unknown>));
 };
 
 export const deleteReferral = async (id: string) => {
@@ -473,7 +478,7 @@ export const addRedeemRequest = async (redeemRequest: RedeemRequest) => {
 
   if (!db) return;
   const { id, ...data } = normalizedRedeem;
-  await setDoc(doc(db, 'redeemRequests', id), data);
+  await setDoc(doc(db, 'redeemRequests', id), removeUndefinedFields(data));
 };
 
 export const updateRedeemRequest = async (redeemRequest: RedeemRequest) => {
@@ -490,7 +495,7 @@ export const updateRedeemRequest = async (redeemRequest: RedeemRequest) => {
 
   if (!db) return;
   const { id, ...data } = normalizedRedeem;
-  await updateDoc(doc(db, 'redeemRequests', id), data as Record<string, unknown>);
+  await updateDoc(doc(db, 'redeemRequests', id), removeUndefinedFields(data as Record<string, unknown>));
 };
 
 export const getReferralBalanceSummary = (
