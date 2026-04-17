@@ -139,6 +139,7 @@ const localSeedRedeems: RedeemRequest[] = [
 const isBrowser = typeof window !== 'undefined';
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+const sanitizeKeyPart = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
 
 const normalizeStore = (store: Store): Store => ({
   ...store,
@@ -538,42 +539,33 @@ export const getReferralBalanceSummary = (
 };
 
 export const submitReferral = async (store: Store, payload: ReferralSubmitPayload) => {
-  const referrals = await getReferrals(store.id);
   const normalizedReferredPhone = payload.referredPhone.replace(/\D/g, '');
 
-  const duplicatedReferral = referrals.find(
-    (item) => item.referredPhone.replace(/\D/g, '') === normalizedReferredPhone
-  );
+  if (isLocalDataMode) {
+    const referrals = await getReferrals(store.id);
+    const duplicatedReferral = referrals.find(
+      (item) => item.referredPhone.replace(/\D/g, '') === normalizedReferredPhone
+    );
 
-  if (duplicatedReferral) {
-    throw new Error('Já existe um cadastro para este número de telefone nesta loja.');
+    if (duplicatedReferral) {
+      throw new Error('Já existe um cadastro para este número de telefone nesta loja.');
+    }
   }
 
   const referrers = await getReferrers(store.id);
   const normalizedPhone = payload.referrerPhone.replace(/\D/g, '');
 
-  let referrer =
-    referrers.find((item) => item.phone.replace(/\D/g, '') === normalizedPhone) ?? null;
+  const referrer =
+    referrers.find((item) => item.id === payload.selectedReferrerId) ??
+    referrers.find((item) => item.phone.replace(/\D/g, '') === normalizedPhone) ??
+    null;
 
-  if (!referrer) {
-    referrer = {
-      id: generateId('ref'),
-      storeId: store.id,
-      name: payload.referrerName.trim(),
-      phone: payload.referrerPhone.trim(),
-      createdAt: Date.now(),
-      isActive: true
-    };
-
-    await saveReferrer(referrer);
-  } else if (referrer.name !== payload.referrerName.trim()) {
-    const updatedReferrer = { ...referrer, name: payload.referrerName.trim() };
-    await saveReferrer(updatedReferrer);
-    referrer = updatedReferrer;
+  if (!referrer || referrer.isActive === false) {
+    throw new Error('O indicador selecionado não foi encontrado. Atualize a página e escolha um nome válido da lista.');
   }
 
   const referral: Referral = {
-    id: generateId('ind'),
+    id: `ind-${sanitizeKeyPart(store.id)}-${normalizedReferredPhone}`,
     storeId: store.id,
     referrerId: referrer.id,
     referrerName: referrer.name,
@@ -591,7 +583,18 @@ export const submitReferral = async (store: Store, payload: ReferralSubmitPayloa
     completedActionIds: payload.completedActionIds
   };
 
-  await addReferral(referral);
+  try {
+    await addReferral(referral);
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+
+    if (message.includes('missing or insufficient permissions')) {
+      throw new Error('Já existe um cadastro para este número de telefone nesta loja.');
+    }
+
+    throw error;
+  }
+
   return { referrer, referral };
 };
 
@@ -613,3 +616,4 @@ export const createRedeemRequestForReferrer = async (
   await addRedeemRequest(redeemRequest);
   return redeemRequest;
 };
+

@@ -31,7 +31,7 @@ service cloud.firestore {
 
     match /referrers/{referrerId} {
       allow create: if isAdmin() || isStoreOwner(request.resource.data.storeId);
-      allow read: if isAdmin() || isStoreOwner(resource.data.storeId);
+      allow read: if true;
       allow update, delete: if isAdmin() || isStoreOwner(resource.data.storeId);
     }
 

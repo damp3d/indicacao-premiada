@@ -114,6 +114,7 @@ const StoreFront: React.FC<StoreFrontProps> = ({ store }) => {
         storeId: store.id,
         referredName,
         referredPhone,
+        selectedReferrerId,
         referrerName,
         referrerPhone,
         referralDate,

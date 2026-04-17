@@ -80,6 +80,7 @@ export interface ReferralSubmitPayload {
   storeId: string;
   referredName: string;
   referredPhone: string;
+  selectedReferrerId: string;
   referrerName: string;
   referrerPhone: string;
   referralDate: string;
